@@ -1,0 +1,641 @@
+<title>Служба эксплуатации здания</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: рабочее место диспетчера — боковая навигация, рабочая область, выезжающая карточка заявки справа */
+:root{
+  --bg:#eceeed; --surface:#fafbfa; --surface-2:#f2f4f3; --ink:#1b2224; --muted:#5b6869; --line:#d3d9d8;
+  --accent:#e2570b; --accent-ink:#ffffff; --accent-soft:#fbe5d7;
+  --crit:#c62828; --crit-soft:#fbe1e1; --warn:#b07d00; --warn-soft:#fbf0cf; --ok:#2a7a3b; --ok-soft:#dcf0e0; --info:#1d6a86; --info-soft:#dbedf4; --idle:#6b7778; --idle-soft:#e6eaea;
+  --font-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121819; --surface:#1a2223; --surface-2:#202a2b; --ink:#e4eae9; --muted:#93a2a3; --line:#2d393b;
+  --accent:#ff7a30; --accent-ink:#1a1006; --accent-soft:#3a2416;
+  --crit:#ff6b6b; --crit-soft:#3d1c1c; --warn:#e8b931; --warn-soft:#3a3115; --ok:#5cc06f; --ok-soft:#18321e; --info:#5fb6d6; --info-soft:#15303a; --idle:#97a4a5; --idle-soft:#283234;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121819; --surface:#1a2223; --surface-2:#202a2b; --ink:#e4eae9; --muted:#93a2a3; --line:#2d393b;
+  --accent:#ff7a30; --accent-ink:#1a1006; --accent-soft:#3a2416;
+  --crit:#ff6b6b; --crit-soft:#3d1c1c; --warn:#e8b931; --warn-soft:#3a3115; --ok:#5cc06f; --ok-soft:#18321e; --info:#5fb6d6; --info-soft:#15303a; --idle:#97a4a5; --idle-soft:#283234;
+  color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:10px;align-items:center;padding:0 6px}
+.brand-mark{width:34px;height:34px;border-radius:6px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--font-display);font-size:13px}
+.brand b{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.02em;display:block}
+.brand small{color:var(--muted);font-size:12px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:6px;color:var(--muted);font-weight:500}
+.nav button:hover{background:var(--surface-2);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--ink);color:var(--surface)}
+.nav button:focus-visible{outline:2px solid var(--accent)}
+.nav .cnt{font-family:var(--font-mono);font-size:11px;padding:1px 7px;border-radius:10px;background:var(--surface-2);color:var(--ink)}
+.nav button[aria-current="page"] .cnt{background:var(--accent);color:var(--accent-ink)}
+.side-foot{margin-top:auto;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:8px;padding:0 6px}
+.linkbtn{all:unset;cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.linkbtn:hover{color:var(--ink)}
+
+.main{min-width:0;padding-block:24px 48px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px;max-width:1280px;width:100%}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.head h1{font-family:var(--font-display);font-weight:600;font-size:22px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.head p{margin:4px 0 0;color:var(--muted)}
+
+.btn{cursor:pointer;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:6px;font-weight:500;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.danger{color:var(--crit)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-h h2{margin:0;font-size:14px;font-weight:600}
+.panel-h span{color:var(--muted);font-size:12px}
+
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:0;text-align:left}
+.kpi:hover{background:var(--surface-2)}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-family:var(--font-mono);font-size:28px;font-weight:600;line-height:1.1}
+.kpi .s{font-size:12px;color:var(--muted)}
+.kpi.alert .v{color:var(--crit)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px}
+.grid2>*{min-width:0}
+
+/* разрез здания */
+.section{padding:14px 16px 18px;display:flex;flex-direction:column;gap:3px}
+.floor{display:grid;grid-template-columns:44px 1fr 64px;align-items:center;gap:10px;cursor:pointer;border:0;background:none;padding:0;text-align:left}
+.floor .no{font-family:var(--font-mono);font-size:12px;color:var(--muted);text-align:right}
+.floor .slab{height:26px;border:1px solid var(--line);border-radius:3px;background:var(--surface-2);position:relative;display:flex;align-items:center;gap:3px;padding:0 6px;overflow:hidden}
+.floor:hover .slab{border-color:var(--muted)}
+.floor .pip{width:10px;height:10px;border-radius:2px;flex:none}
+.floor .n{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.floor.ground .slab{border-bottom:3px solid var(--ink)}
+.floor.under .slab{background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,var(--bg) 6px 12px)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:0 16px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.list{display:flex;flex-direction:column}
+.li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.li:first-child{border-top:0}
+.li:hover{background:var(--surface-2)}
+.li .t{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li .sub{font-size:12px;color:var(--muted)}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+
+.bars{padding:12px 16px 16px;display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:150px 1fr 28px;gap:10px;align-items:center;font-size:13px}
+.bar .track{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;background:var(--ink);border-radius:4px}
+.bar .num{font-family:var(--font-mono);text-align:right;color:var(--muted)}
+
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.c-crit{background:var(--crit-soft);color:var(--crit)}
+.c-warn{background:var(--warn-soft);color:var(--warn)}
+.c-ok{background:var(--ok-soft);color:var(--ok)}
+.c-info{background:var(--info-soft);color:var(--info)}
+.c-idle{background:var(--idle-soft);color:var(--idle)}
+.c-acc{background:var(--accent-soft);color:var(--accent)}
+.tid{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.sla{font-family:var(--font-mono);font-size:12px;white-space:nowrap}
+.sla.late{color:var(--crit);font-weight:600}
+.sla.soon{color:var(--warn)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar input,.toolbar select,.field input,.field select,.field textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.toolbar input{flex:1 1 220px;min-width:0}
+.toolbar select{flex:0 1 auto}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:7px 12px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:820px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+td .t{font-weight:500}
+td .sub{font-size:12px;color:var(--muted)}
+tr.prio-0 td:first-child{box-shadow:inset 3px 0 0 var(--crit)}
+
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.col h3{margin:0 0 2px;font-size:12px;font-weight:600;display:flex;justify-content:space-between;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:left}
+.card:hover{border-color:var(--muted)}
+.card .row{display:flex;justify-content:space-between;gap:6px;align-items:center;flex-wrap:wrap}
+
+.staff{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.person{padding:16px;display:flex;flex-direction:column;gap:10px}
+.person .top{display:flex;gap:12px;align-items:center}
+.ava{width:40px;height:40px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-weight:600;font-size:13px;flex:none}
+.person .name{font-weight:600}
+.person .role{color:var(--muted);font-size:12px}
+.load{display:flex;gap:3px}
+.load i{flex:1;height:6px;border-radius:2px;background:var(--surface-2)}
+.load i.on{background:var(--ink)}
+.load.hi i.on{background:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.copy{all:unset;cursor:pointer;font-family:var(--font-mono);font-size:12px;border-bottom:1px dashed var(--muted)}
+
+/* drawer & modal */
+.scrim{position:fixed;inset:0;background:rgba(10,14,15,.45);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:41;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.drawer-h h2{margin:4px 0 0;font-size:18px;font-weight:600;text-wrap:balance}
+.drawer-b{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:18px;flex:1}
+.x{border:0;background:none;cursor:pointer;font-size:22px;line-height:1;color:var(--muted);padding:4px 8px;border-radius:6px}
+.x:hover{background:var(--surface-2);color:var(--ink)}
+.blk h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.steps{display:flex;flex-wrap:wrap;gap:6px}
+.steps button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;cursor:pointer;font-size:13px}
+.steps button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.hist{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:4px}
+.hist div{padding:0 0 12px 14px;position:relative;font-size:13px}
+.hist div::before{content:"";position:absolute;left:-6px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--line)}
+.hist time{display:block;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.comment{display:flex;gap:8px}
+.comment input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px}
+.modal-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;width:min(640px,100%);max-height:calc(100vh - 32px);overflow-y:auto;position:relative}
+.form{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.field.full{grid-column:1/-1}
+.field textarea{min-height:80px;resize:vertical}
+.form-f{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--line)}
+.err{color:var(--crit);font-size:12px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:6px;z-index:60;font-size:13px}
+
+@media (max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .side{position:sticky;top:env(safe-area-inset-top,0px);height:auto;flex-direction:row;align-items:center;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));gap:12px;z-index:20;border-right:0;border-bottom:1px solid var(--line)}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+  .brand div:last-child,.side-foot{display:none}
+  .nav{flex-direction:row;overflow-x:auto;min-width:0;flex:1}
+  .nav button{white-space:nowrap;padding:7px 10px}
+  .main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi .v{font-size:24px}
+  .bar{grid-template-columns:110px 1fr 24px}
+  .form{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+</style>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">СБ</div>
+      <div><b>СЕВЕРНАЯ БАШНЯ</b><small>Служба эксплуатации</small></div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Разделы"></nav>
+    <div class="side-foot">
+      <div>БЦ класса B+, ул. Лесная, 12<br>9 этажей + паркинг, 14 200 м²</div>
+      <div>Данные демонстрационные и хранятся в этом браузере.</div>
+      <button class="linkbtn" id="reset" type="button">Сбросить к примеру</button>
+    </div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="layer"></div>
+
+<script>
+(()=>{
+const H=3600e3, D=24*H, NOW=()=>Date.now();
+const KEY='bldg-crm-v1';
+const PRIO=[
+  {n:'Аварийная',sla:2,c:'c-crit'},{n:'Высокая',sla:8,c:'c-acc'},{n:'Обычная',sla:24,c:'c-info'},{n:'Низкая',sla:72,c:'c-idle'}];
+const STATUS=[
+  {n:'Новая',c:'c-acc'},{n:'Назначена',c:'c-info'},{n:'В работе',c:'c-warn'},{n:'Ждёт запчасти',c:'c-idle'},{n:'Выполнена',c:'c-ok'},{n:'Закрыта',c:'c-idle'}];
+const OPEN=[0,1,2,3];
+const CATS=['Электрика','Сантехника','ОВиК','Лифты','Слаботочные системы','Пожарная безопасность','Уборка','Общестрой'];
+const FLOORS=[9,8,7,6,5,4,3,2,1,-1];
+const flName=f=>f===-1?'Паркинг −1':f+' этаж';
+
+/* ---------- данные-пример ---------- */
+function seed(){
+  const n=NOW();
+  const staff=[
+    {id:'s1',name:'Игорь Валеев',role:'Главный инженер',phone:'+7 916 204-11-08',shift:'Пн–Пт 8:00–17:00'},
+    {id:'s2',name:'Сергей Корнилов',role:'Электрик, V группа допуска',phone:'+7 925 330-47-12',shift:'Сутки через трое'},
+    {id:'s3',name:'Алексей Мухин',role:'Сантехник',phone:'+7 903 718-90-55',shift:'Пн–Пт 8:00–20:00'},
+    {id:'s4',name:'Рустам Назаров',role:'Инженер ОВиК',phone:'+7 985 121-63-07',shift:'Пн–Пт 9:00–18:00'},
+    {id:'s5',name:'Ольга Демченко',role:'Менеджер клининга',phone:'+7 977 402-28-91',shift:'Ежедневно 7:00–16:00'},
+    {id:'s6',name:'Павел Ситников',role:'Инженер СКУД и видеонаблюдения',phone:'+7 926 559-04-36',shift:'Пн–Пт 9:00–18:00'}];
+  const assets=[
+    {id:'ОБ-001',name:'ГРЩ-1, главный распределительный щит',cat:'Электрика',floor:-1,loc:'Электрощитовая П-04',state:0,serial:'ЩО-70-1-03'},
+    {id:'ОБ-002',name:'ДГУ резервного питания 400 кВА',cat:'Электрика',floor:-1,loc:'Помещение ДГУ',state:0,serial:'AKSA AC-550'},
+    {id:'ОБ-003',name:'Лифт пассажирский №1',cat:'Лифты',floor:1,loc:'Лифтовой холл А',state:0,serial:'OTIS Gen2 1000 кг'},
+    {id:'ОБ-004',name:'Лифт пассажирский №2',cat:'Лифты',floor:1,loc:'Лифтовой холл А',state:2,serial:'OTIS Gen2 1000 кг'},
+    {id:'ОБ-005',name:'Приточная установка П1',cat:'ОВиК',floor:9,loc:'Венткамера кровли',state:1,serial:'Systemair Topvex TR15'},
+    {id:'ОБ-006',name:'Чиллер холодоснабжения',cat:'ОВиК',floor:9,loc:'Кровля, ось 4–6',state:0,serial:'Carrier 30RB-302'},
+    {id:'ОБ-007',name:'ИТП, тепловой пункт',cat:'Сантехника',floor:-1,loc:'Помещение ИТП П-02',state:0,serial:'Danfoss АИТП-1'},
+    {id:'ОБ-008',name:'Насосная станция ХВС',cat:'Сантехника',floor:-1,loc:'Насосная П-03',state:1,serial:'Grundfos Hydro MPC-E'},
+    {id:'ОБ-009',name:'Прибор АПС «Рубеж-2ОП»',cat:'Пожарная безопасность',floor:1,loc:'Пост охраны',state:0,serial:'Рубеж-2ОП прот. R3'},
+    {id:'ОБ-010',name:'СКУД, турникеты входной группы',cat:'Слаботочные системы',floor:1,loc:'Ресепшен',state:0,serial:'PERCo TTD-03.1'},
+    {id:'ОБ-011',name:'Шлагбаум въезда в паркинг',cat:'Слаботочные системы',floor:-1,loc:'Рампа',state:1,serial:'CAME GARD 4'},
+    {id:'ОБ-012',name:'Фанкойлы 5 этажа (24 шт.)',cat:'ОВиК',floor:5,loc:'Офисы 501–512',state:0,serial:'Daikin FWB'}];
+  const T=(id,title,desc,cat,prio,status,floor,room,asset,who,hoursAgo,author,hist)=>{
+    const created=n-hoursAgo*H;
+    const h=[{t:created,text:'Заявка создана: '+author}];
+    (hist||[]).forEach(([dh,txt])=>h.push({t:created+dh*H,text:txt}));
+    return {id,title,desc,cat,prio,status,floor,room,asset,assignee:who,created,author,history:h,doneAt:status>=4?created+(hist&&hist.length?hist[hist.length-1][0]:4)*H:null};
+  };
+  const tickets=[
+    T(1061,'Лифт №2 остановился между 4 и 5 этажами','Пассажиров эвакуировала аварийная служба. Лифт отключён, на табло ошибка E-23.','Лифты',0,2,4,'Лифтовой холл А','ОБ-004','s1',1.2,'Пост охраны',[[0.2,'Назначен: Игорь Валеев'],[0.4,'Статус: В работе. Вызван подрядчик OTIS']]),
+    T(1060,'Течь под раковиной в санузле','Капает из сифона, на полу лужа. Перекрыли кран под раковиной.','Сантехника',1,1,6,'Санузел М, 6 этаж',null,'s3',3,'ООО «Вектор Логистик», оф. 604',[[0.5,'Назначен: Алексей Мухин']]),
+    T(1059,'Жарко в переговорной, +27 °C','Кондиционирование не справляется после обеда. Фанкойл шумит, но не охлаждает.','ОВиК',2,0,5,'Переговорная 508','ОБ-012',null,2,'АО «Терра», оф. 508'),
+    T(1058,'Не работает пропуск сотрудника','Турникет показывает красный индикатор, карта №004417.','Слаботочные системы',2,4,1,'Ресепшен','ОБ-010','s6',20,'Ресепшен',[[1,'Назначен: Павел Ситников'],[3,'Статус: Выполнена. Карта перепрописана в базе']]),
+    T(1057,'Мигают светильники в коридоре','Три светильника у лестницы Б мигают, один не горит.','Электрика',3,1,7,'Коридор, ось Б','',  's2',30,'Администратор этажа',[[2,'Назначен: Сергей Корнилов']]),
+    T(1056,'Приточка П1: авария по фильтру','Датчик перепада давления показывает засор фильтра F7.','ОВиК',1,3,9,'Венткамера кровли','ОБ-005','s4',26,'Диспетчерская',[[1,'Назначен: Рустам Назаров'],[3,'Статус: Ждёт запчасти. Заказаны фильтры F7, поставка 2 дня']]),
+    T(1055,'Шлагбаум не открывается по пульту','Работает только через кнопку охраны.','Слаботочные системы',2,2,-1,'Рампа въезда','ОБ-011','s6',18,'Охрана паркинга',[[2,'Назначен: Павел Ситников'],[5,'Статус: В работе']]),
+    T(1054,'Разлили кофе на ковролин в холле','Пятно около 1 м² у лифтов.','Уборка',2,5,3,'Лифтовой холл, 3 этаж',null,'s5',50,'ИП Сорокина, оф. 305',[[0.5,'Назначен: Ольга Демченко'],[3,'Статус: Выполнена'],[6,'Статус: Закрыта']]),
+    T(1053,'Трещина в стеклопакете окна','Наружное стекло, без угрозы выпадения. Нужна замена.','Общестрой',3,1,8,'Офис 803',null,'s1',70,'ООО «Сфера», оф. 803',[[4,'Назначен: Игорь Валеев']]),
+    T(1052,'Низкое давление холодной воды','На 8–9 этажах слабый напор в часы пик.','Сантехника',1,2,8,'Стояк В2','ОБ-008','s3',12,'Диспетчерская',[[1,'Назначен: Алексей Мухин'],[2,'Статус: В работе. Проверка насосной станции']]),
+    T(1051,'Ложное срабатывание датчика дыма','Датчик ИП-212 в кухне офиса 402 сработал без задымления.','Пожарная безопасность',1,4,4,'Офис 402, кухня','ОБ-009','s6',40,'Пост охраны',[[0.3,'Назначен: Павел Ситников'],[2,'Статус: Выполнена. Датчик очищен, проведён тест']]),
+    T(1050,'Не горит подсветка вывески','Вывеска на фасаде не включается с 18:00.','Электрика',2,0,1,'Фасад, главный вход',null,null,6,'Управляющий объектом'),
+    T(1049,'Скрипит дверь эвакуационного выхода','Лестница А, 2 этаж, дверь тяжело закрывается.','Общестрой',3,5,2,'Лестница А',null,'s1',120,'Охрана',[[5,'Назначен: Игорь Валеев'],[30,'Статус: Выполнена. Отрегулирован доводчик'],[40,'Статус: Закрыта']]),
+  ];
+  const day=x=>n+x*D;
+  const plans=[
+    {id:'p1',asset:'ОБ-003',task:'Ежемесячное ТО лифта по договору',period:30,last:day(-27),who:'s1'},
+    {id:'p2',asset:'ОБ-004',task:'Ежемесячное ТО лифта по договору',period:30,last:day(-27),who:'s1'},
+    {id:'p3',asset:'ОБ-005',task:'Замена фильтров F7 и G4, проверка ремней',period:90,last:day(-95),who:'s4'},
+    {id:'p4',asset:'ОБ-002',task:'Пробный пуск ДГУ под нагрузкой 30 мин',period:30,last:day(-24),who:'s2'},
+    {id:'p5',asset:'ОБ-001',task:'Тепловизионный контроль контактов ГРЩ',period:180,last:day(-60),who:'s2'},
+    {id:'p6',asset:'ОБ-007',task:'Промывка теплообменника ИТП',period:365,last:day(-340),who:'s3'},
+    {id:'p7',asset:'ОБ-009',task:'Проверка работоспособности АПС и СОУЭ',period:30,last:day(-31),who:'s6'},
+    {id:'p8',asset:'ОБ-006',task:'Сезонная консервация чиллера',period:365,last:day(-358),who:'s4'},
+    {id:'p9',asset:'ОБ-012',task:'Чистка дренажа и фильтров фанкойлов',period:90,last:day(-40),who:'s4'},
+    {id:'p10',asset:'ОБ-008',task:'Проверка мембранного бака и реле давления',period:90,last:day(-70),who:'s3'}];
+  return {staff,assets,tickets,plans,seq:1062};
+}
+
+let db; try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!db||!db.tickets) db=seed();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+let ui={view:'dash',q:'',st:'open',pr:'',cat:'',fl:'',mode:'table'};
+try{const v=localStorage.getItem(KEY+'-view'); if(v) ui.view=v}catch(e){}
+if(/^#(dash|tickets|plan|assets|staff)$/.test(location.hash)) ui.view=location.hash.slice(1);
+
+/* ---------- утилиты ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const staffBy=id=>db.staff.find(s=>s.id===id);
+const assetBy=id=>db.assets.find(a=>a.id===id);
+const due=t=>t.created+PRIO[t.prio].sla*H;
+const isOpen=t=>OPEN.includes(t.status);
+const late=t=>isOpen(t)&&due(t)<NOW();
+const dur=ms=>{const a=Math.abs(ms);if(a<H)return Math.max(1,Math.round(a/60e3))+' мин';if(a<2*D)return Math.round(a/H)+' ч';return Math.round(a/D)+' дн'};
+const dt=ms=>new Date(ms).toLocaleString('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const dDay=ms=>new Date(ms).toLocaleDateString('ru-RU',{day:'2-digit',month:'short',year:'numeric'});
+const chip=(o)=>`<span class="chip ${o.c}">${esc(o.n)}</span>`;
+const initials=n=>n.split(' ').map(w=>w[0]).join('').slice(0,2);
+function slaCell(t){
+  if(!isOpen(t)) return `<span class="sla">${t.doneAt?'закрыта за '+dur(t.doneAt-t.created):'—'}</span>`;
+  const r=due(t)-NOW();
+  if(r<0) return `<span class="sla late">просрочено ${dur(r)}</span>`;
+  return `<span class="sla ${r<PRIO[t.prio].sla*H*0.25?'soon':''}">осталось ${dur(r)}</span>`;
+}
+function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;el.setAttribute('role','status');document.body.appendChild(el);setTimeout(()=>el.remove(),2200)}
+const planNext=p=>p.last+p.period*D;
+function planState(p){const r=planNext(p)-NOW();if(r<0)return{n:'Просрочено',c:'c-crit',r};if(r<7*D)return{n:'На этой неделе',c:'c-warn',r};return{n:'По графику',c:'c-ok',r}}
+const SSTATE=[{n:'Работает',c:'c-ok'},{n:'Отпуск',c:'c-idle'},{n:'Больничный',c:'c-warn'},{n:'Не на объекте',c:'c-info'}];
+const ASTATE=[{n:'Исправно',c:'c-ok'},{n:'Требует внимания',c:'c-warn'},{n:'Неисправно',c:'c-crit'}];
+
+/* ---------- навигация ---------- */
+const VIEWS=[['dash','Обзор'],['tickets','Заявки'],['plan','Плановое ТО'],['assets','Оборудование'],['staff','Персонал']];
+function renderNav(){
+  const openN=db.tickets.filter(isOpen).length, planN=db.plans.filter(p=>planNext(p)-NOW()<7*D).length;
+  const cnt={tickets:openN,plan:planN};
+  $('#nav').innerHTML=VIEWS.map(([k,n])=>`<button type="button" data-v="${k}" ${ui.view===k?'aria-current="page"':''}><span>${n}</span>${cnt[k]?`<span class="cnt">${cnt[k]}</span>`:''}</button>`).join('');
+}
+$('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b)go(b.dataset.v)});
+function go(v,patch){ui.view=v;Object.assign(ui,patch||{});try{localStorage.setItem(KEY+'-view',v)}catch(e){}render();window.scrollTo(0,0)}
+
+/* ---------- обзор ---------- */
+function vDash(){
+  const open=db.tickets.filter(isOpen), lateN=open.filter(late).length, emerg=open.filter(t=>t.prio===0).length;
+  const plan7=db.plans.filter(p=>planNext(p)-NOW()<7*D).length;
+  const done7=db.tickets.filter(t=>t.doneAt&&NOW()-t.doneAt<7*D).length;
+  const floors=FLOORS.map(f=>{const ts=open.filter(t=>t.floor===f).sort((a,b)=>a.prio-b.prio);return{f,ts}});
+  const attention=open.slice().sort((a,b)=>(late(b)-late(a))||(a.prio-b.prio)||(due(a)-due(b))).slice(0,6);
+  const byCat=CATS.map(c=>[c,open.filter(t=>t.cat===c).length]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]);
+  const maxC=Math.max(1,...byCat.map(x=>x[1]));
+  const pipColor=p=>['var(--crit)','var(--accent)','var(--info)','var(--idle)'][p];
+  return `
+  <div class="head"><div><h1>Обзор объекта</h1><p>${new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'})} · смена диспетчера</p></div>
+  <button class="btn primary" data-act="new">+ Новая заявка</button></div>
+  <div class="kpis">
+    <button class="kpi" data-go="tickets" data-st="open"><span class="l">Открытые заявки</span><span class="v">${open.length}</span><span class="s">в работе у ${new Set(open.map(t=>t.assignee).filter(Boolean)).size} сотрудников</span></button>
+    <button class="kpi ${lateN?'alert':''}" data-go="tickets" data-st="late"><span class="l">Просрочен SLA</span><span class="v">${lateN}</span><span class="s">срок реакции истёк</span></button>
+    <button class="kpi ${emerg?'alert':''}" data-go="tickets" data-st="open" data-pr="0"><span class="l">Аварийные</span><span class="v">${emerg}</span><span class="s">SLA 2 часа</span></button>
+    <button class="kpi" data-go="plan"><span class="l">ТО на 7 дней</span><span class="v">${plan7}</span><span class="s">включая просроченные</span></button>
+    <button class="kpi" data-go="tickets" data-st="done"><span class="l">Выполнено за 7 дней</span><span class="v">${done7}</span><span class="s">заявок закрыто</span></button>
+  </div>
+  <div class="grid2">
+    <section class="panel"><div class="panel-h"><h2>Разрез здания: открытые заявки</h2><span>нажмите на этаж</span></div>
+      <div class="section">${floors.map(({f,ts})=>`
+        <button class="floor ${f===1?'ground':''} ${f<0?'under':''}" data-floor="${f}" aria-label="${flName(f)}: ${ts.length} заявок">
+          <span class="no">${f<0?'П−1':f}</span>
+          <span class="slab">${ts.map(t=>`<i class="pip" style="background:${pipColor(t.prio)}" title="${esc(t.title)}"></i>`).join('')}</span>
+          <span class="n">${ts.length?ts.length+' шт.':'—'}</span>
+        </button>`).join('')}</div>
+      <div class="legend">${PRIO.map((p,i)=>`<span><i style="background:${pipColor(i)}"></i>${p.n}</span>`).join('')}</div>
+    </section>
+    <section class="panel"><div class="panel-h"><h2>Требует внимания</h2><span>по сроку SLA</span></div>
+      <div class="list">${attention.length?attention.map(t=>`
+        <button class="li" data-open="${t.id}"><span class="tid">ЗЯ-${t.id}</span>
+          <span style="min-width:0"><div class="t">${esc(t.title)}</div><div class="sub">${flName(t.floor)} · ${esc(t.room)} · ${t.assignee?esc(staffBy(t.assignee)?.name):'не назначен'}</div></span>
+          ${slaCell(t)}</button>`).join(''):'<div class="empty">Открытых заявок нет</div>'}</div>
+    </section>
+  </div>
+  <div class="grid2">
+    <section class="panel"><div class="panel-h"><h2>Открытые заявки по системам</h2></div>
+      <div class="bars">${byCat.length?byCat.map(([c,n])=>`<div class="bar"><span>${esc(c)}</span><span class="track"><span class="fill" style="display:block;width:${n/maxC*100}%"></span></span><span class="num">${n}</span></div>`).join(''):'<div class="empty">Нет данных</div>'}</div>
+    </section>
+    <section class="panel"><div class="panel-h"><h2>Ближайшее плановое ТО</h2><button class="btn sm" data-go="plan">Весь график</button></div>
+      <div class="list">${db.plans.slice().sort((a,b)=>planNext(a)-planNext(b)).slice(0,5).map(p=>{const s=planState(p),a=assetBy(p.asset);return`
+        <button class="li" data-go="plan"><span class="tid">${p.asset}</span><span style="min-width:0"><div class="t">${esc(p.task)}</div><div class="sub">${esc(a?.name)}</div></span>
+        <span class="sla ${s.r<0?'late':s.r<7*D?'soon':''}">${s.r<0?'просрочено '+dur(s.r):dDay(planNext(p))}</span></button>`}).join('')}</div>
+    </section>
+  </div>`;
+}
+
+/* ---------- заявки ---------- */
+function filtered(){
+  const q=ui.q.trim().toLowerCase();
+  return db.tickets.filter(t=>{
+    if(ui.st==='open'&&!isOpen(t))return false;
+    if(ui.st==='late'&&!late(t))return false;
+    if(ui.st==='done'&&isOpen(t))return false;
+    if(/^\d$/.test(ui.st)&&t.status!==+ui.st)return false;
+    if(ui.pr!==''&&t.prio!==+ui.pr)return false;
+    if(ui.cat&&t.cat!==ui.cat)return false;
+    if(ui.fl!==''&&t.floor!==+ui.fl)return false;
+    if(q&&!(String(t.id)+' '+t.title+' '+t.room+' '+t.author+' '+(staffBy(t.assignee)?.name||'')).toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>(isOpen(b)-isOpen(a))||(late(b)-late(a))||(a.prio-b.prio)||(b.created-a.created));
+}
+function vTickets(){
+  const list=filtered();
+  const opt=(v,n,cur)=>`<option value="${v}" ${String(cur)===String(v)?'selected':''}>${esc(n)}</option>`;
+  const body=ui.mode==='table'?`
+    <section class="panel tablewrap"><table>
+      <thead><tr><th>№</th><th>Заявка</th><th>Система</th><th>Приоритет</th><th>Статус</th><th>Исполнитель</th><th>Срок SLA</th></tr></thead>
+      <tbody>${list.map(t=>`<tr class="prio-${t.prio}" data-open="${t.id}" tabindex="0">
+        <td class="tid">ЗЯ-${t.id}</td>
+        <td><div class="t">${esc(t.title)}</div><div class="sub">${flName(t.floor)} · ${esc(t.room)}</div></td>
+        <td>${esc(t.cat)}</td><td>${chip(PRIO[t.prio])}</td><td>${chip(STATUS[t.status])}</td>
+        <td>${t.assignee?esc(staffBy(t.assignee)?.name):'<span class="sub">не назначен</span>'}</td>
+        <td>${slaCell(t)}</td></tr>`).join('')||`<tr><td colspan="7" class="empty">По этим условиям заявок нет. Сбросьте фильтры или создайте новую заявку.</td></tr>`}</tbody>
+    </table></section>`:`
+    <div class="kanban">${[0,1,2,3,4].map(s=>{const col=list.filter(t=>t.status===s);return`
+      <div class="col"><h3><span>${STATUS[s].n}</span><span class="mono">${col.length}</span></h3>
+      ${col.map(t=>`<button class="card" data-open="${t.id}"><div class="row"><span class="tid">ЗЯ-${t.id}</span>${chip(PRIO[t.prio])}</div>
+        <div class="t" style="font-weight:500">${esc(t.title)}</div>
+        <div class="row"><span class="sub" style="font-size:12px;color:var(--muted)">${flName(t.floor)}</span>${slaCell(t)}</div></button>`).join('')}</div>`}).join('')}</div>`;
+  return `
+  <div class="head"><div><h1>Заявки</h1><p>${list.length} из ${db.tickets.length} · сортировка по сроку и приоритету</p></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Вид"><button type="button" data-mode="table" aria-pressed="${ui.mode==='table'}">Список</button><button type="button" data-mode="kanban" aria-pressed="${ui.mode==='kanban'}">Доска</button></div>
+  <button class="btn primary" data-act="new">+ Новая заявка</button></div></div>
+  <div class="toolbar">
+    <input id="f-q" type="search" placeholder="Поиск: номер, описание, помещение, заявитель" value="${esc(ui.q)}" aria-label="Поиск">
+    <select id="f-st" aria-label="Статус">${opt('open','Все открытые',ui.st)}${opt('late','Просрочен SLA',ui.st)}${opt('done','Выполненные и закрытые',ui.st)}${opt('all','Все заявки',ui.st)}${STATUS.map((s,i)=>opt(i,s.n,ui.st)).join('')}</select>
+    <select id="f-pr" aria-label="Приоритет">${opt('','Любой приоритет',ui.pr)}${PRIO.map((p,i)=>opt(i,p.n,ui.pr)).join('')}</select>
+    <select id="f-cat" aria-label="Система">${opt('','Все системы',ui.cat)}${CATS.map(c=>opt(c,c,ui.cat)).join('')}</select>
+    <select id="f-fl" aria-label="Этаж">${opt('','Все этажи',ui.fl)}${FLOORS.map(f=>opt(f,flName(f),ui.fl)).join('')}</select>
+  </div>${body}`;
+}
+
+/* ---------- плановое ТО ---------- */
+function vPlan(){
+  const list=db.plans.slice().sort((a,b)=>planNext(a)-planNext(b));
+  return `<div class="head"><div><h1>Плановое ТО</h1><p>График регламентных работ по оборудованию</p></div><button class="btn primary" data-act="newplan">+ Добавить работу</button></div>
+  <section class="panel tablewrap"><table>
+    <thead><tr><th>Оборудование</th><th>Работа</th><th>Период</th><th>Последнее</th><th>Следующее</th><th>Состояние</th><th>Ответственный</th><th></th></tr></thead>
+    <tbody>${list.map(p=>{const a=assetBy(p.asset),s=planState(p);return`<tr style="cursor:default">
+      <td><div class="tid">${p.asset}</div><div class="sub">${esc(a?.name)}</div></td>
+      <td class="t">${esc(p.task)}</td>
+      <td class="mono">${p.period===365?'1 раз в год':p.period===30?'ежемесячно':p.period===90?'ежеквартально':p.period===180?'2 раза в год':'каждые '+p.period+' дн.'}</td>
+      <td class="mono">${dDay(p.last)}</td><td class="mono">${dDay(planNext(p))}</td>
+      <td>${chip(s)}${s.r<0?`<div class="sla late" style="margin-top:4px">на ${dur(s.r)}</div>`:''}</td>
+      <td>${p.who&&staffBy(p.who)?esc(staffBy(p.who).name):'<span class="sub">не назначен</span>'}</td>
+      <td><button class="btn sm" data-done="${p.id}">Выполнено</button></td></tr>`}).join('')}</tbody>
+  </table></section>`;
+}
+
+/* ---------- оборудование ---------- */
+function vAssets(){
+  return `<div class="head"><div><h1>Оборудование</h1><p>Реестр инженерных систем объекта · ${db.assets.length} позиций</p></div></div>
+  <section class="panel tablewrap"><table>
+    <thead><tr><th>Инв. №</th><th>Наименование</th><th>Система</th><th>Расположение</th><th>Модель</th><th>Состояние</th><th>Заявки</th><th></th></tr></thead>
+    <tbody>${db.assets.map(a=>{const op=db.tickets.filter(t=>t.asset===a.id&&isOpen(t)).length;return`<tr style="cursor:default">
+      <td class="tid">${a.id}</td><td class="t">${esc(a.name)}</td><td>${esc(a.cat)}</td>
+      <td><div>${flName(a.floor)}</div><div class="sub">${esc(a.loc)}</div></td>
+      <td class="mono" style="font-size:12px">${esc(a.serial)}</td>
+      <td><select data-astate="${a.id}" aria-label="Состояние ${esc(a.name)}" style="background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 6px">${ASTATE.map((s,i)=>`<option value="${i}" ${a.state===i?'selected':''}>${s.n}</option>`).join('')}</select></td>
+      <td class="mono">${op?`<button class="linkbtn" data-assetq="${a.id}">${op} откр.</button>`:'—'}</td>
+      <td><button class="btn sm" data-act="new" data-asset="${a.id}">Заявка</button></td></tr>`}).join('')}</tbody>
+  </table></section>`;
+}
+
+/* ---------- персонал ---------- */
+function vStaff(){
+  return `<div class="head"><div><h1>Персонал</h1><p>Инженерная служба и подрядчики на объекте</p></div><button class="btn primary" data-act="newstaff">+ Добавить сотрудника</button></div>
+  <div class="staff">${db.staff.map(s=>{const mine=db.tickets.filter(t=>t.assignee===s.id&&isOpen(t));const n=mine.length;const st=SSTATE[s.avail||0];return`
+    <section class="panel person">
+      <div class="top"><div class="ava">${esc(initials(s.name))}</div><div style="flex:1;min-width:0"><div class="name">${esc(s.name)}</div><div class="role">${esc(s.role)}</div></div><button class="btn sm" data-staffedit="${s.id}" aria-label="Редактировать: ${esc(s.name)}">Изменить</button></div>
+      <div>${chip(st)}</div>
+      <dl class="kv"><dt>Телефон</dt><dd>${s.phone?`<button class="copy" data-copy="${esc(s.phone)}" title="Скопировать">${esc(s.phone)}</button>`:'—'}</dd>${s.email?`<dt>Почта</dt><dd><button class="copy" data-copy="${esc(s.email)}" title="Скопировать">${esc(s.email)}</button></dd>`:''}<dt>График</dt><dd>${esc(s.shift)||'—'}</dd>${s.note?`<dt>Заметки</dt><dd>${esc(s.note)}</dd>`:''}</dl>
+      <div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px"><span>Загрузка</span><span class="mono">${n} откр. заявок</span></div>
+      <div class="load ${n>=3?'hi':''}">${[0,1,2,3,4].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</div></div>
+      ${mine.length?`<div class="list" style="margin:0 -16px -16px;border-top:1px solid var(--line)">${mine.map(t=>`<button class="li" data-open="${t.id}"><span class="tid">ЗЯ-${t.id}</span><span class="t">${esc(t.title)}</span>${slaCell(t)}</button>`).join('')}</div>`:''}
+    </section>`}).join('')}</div>`;
+}
+
+/* ---------- карточка заявки ---------- */
+function openTicket(id){
+  const t=db.tickets.find(x=>x.id===+id); if(!t) return;
+  const a=assetBy(t.asset);
+  $('#layer').innerHTML=`<div class="scrim" data-close></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-t">
+    <div class="drawer-h"><div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tid">ЗЯ-${t.id}</span>${chip(PRIO[t.prio])}${chip(STATUS[t.status])}</div><h2 id="dr-t">${esc(t.title)}</h2></div><button class="x" data-close aria-label="Закрыть">×</button></div>
+    <div class="drawer-b">
+      ${t.desc?`<p style="margin:0">${esc(t.desc)}</p>`:''}
+      <dl class="kv">
+        <dt>Место</dt><dd>${flName(t.floor)} · ${esc(t.room)}</dd>
+        <dt>Система</dt><dd>${esc(t.cat)}</dd>
+        ${a?`<dt>Оборудование</dt><dd><span class="tid">${a.id}</span> ${esc(a.name)}</dd>`:''}
+        <dt>Заявитель</dt><dd>${esc(t.author)}</dd>
+        <dt>Создана</dt><dd class="mono">${dt(t.created)}</dd>
+        <dt>Срок SLA</dt><dd>${dt(due(t))} · ${slaCell(t)}</dd>
+      </dl>
+      <div class="blk"><h4>Статус</h4><div class="steps">${STATUS.map((s,i)=>`<button type="button" data-status="${i}" aria-pressed="${t.status===i}">${s.n}</button>`).join('')}</div></div>
+      <div class="blk"><h4>Исполнитель</h4><select id="dr-who" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px"><option value="">Не назначен</option>${db.staff.map(s=>`<option value="${s.id}" ${t.assignee===s.id?'selected':''}>${esc(s.name)} — ${esc(s.role)}</option>`).join('')}</select></div>
+      <div class="blk"><h4>Комментарий</h4><form class="comment" id="dr-c"><input id="dr-ci" placeholder="Что сделано, что нужно" aria-label="Комментарий"><button class="btn">Добавить</button></form></div>
+      <div class="blk"><h4>История</h4><div class="hist">${t.history.slice().reverse().map(h=>`<div><time>${dt(h.t)}</time>${esc(h.text)}</div>`).join('')}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto"><button class="btn" data-edit="${t.id}">Редактировать</button><button class="btn danger" data-del="${t.id}">Удалить заявку</button></div>
+      <div id="dr-confirm" hidden class="panel" style="padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Удалить ЗЯ-${t.id} без возможности восстановления?</span><button class="btn danger sm" data-delok="${t.id}">Удалить</button><button class="btn sm" data-delno>Отмена</button></div>
+    </div>
+  </aside>`;
+  const d=$('.drawer');
+  d.addEventListener('click',e=>{
+    const s=e.target.closest('[data-status]');
+    if(s){const v=+s.dataset.status;if(v!==t.status){t.status=v;t.history.push({t:NOW(),text:'Статус: '+STATUS[v].n});t.doneAt=v>=4?(t.doneAt||NOW()):null;if(v>=1&&!t.assignee&&v<4){}commit();openTicket(t.id);toast('Статус: '+STATUS[v].n)}}
+    if(e.target.closest('[data-edit]')){closeLayer();ticketForm(t)}
+    if(e.target.closest('[data-del]')){$('#dr-confirm').hidden=false}
+    if(e.target.closest('[data-delno]')){$('#dr-confirm').hidden=true}
+    if(e.target.closest('[data-delok]')){db.tickets=db.tickets.filter(x=>x!==t);commit();closeLayer();toast('Заявка удалена')}
+  });
+  $('#dr-who').addEventListener('change',e=>{t.assignee=e.target.value||null;t.history.push({t:NOW(),text:t.assignee?'Назначен: '+staffBy(t.assignee).name:'Исполнитель снят'});if(t.assignee&&t.status===0)t.status=1;commit();openTicket(t.id);toast('Исполнитель сохранён')});
+  $('#dr-c').addEventListener('submit',e=>{e.preventDefault();const v=$('#dr-ci').value.trim();if(!v)return;t.history.push({t:NOW(),text:'Комментарий: '+v});commit();openTicket(t.id)});
+  d.querySelector('.x').focus();
+}
+function closeLayer(){$('#layer').innerHTML=''}
+$('#layer').addEventListener('click',e=>{if(e.target.matches('[data-close]')||e.target.closest('.x[data-close]'))closeLayer()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#layer').innerHTML)closeLayer()});
+
+/* ---------- формы ---------- */
+function ticketForm(t,pre){
+  const ed=!!t; t=t||Object.assign({title:'',desc:'',cat:'Электрика',prio:2,floor:1,room:'',asset:'',assignee:'',author:''},pre||{});
+  const o=(v,n,c)=>`<option value="${esc(v)}" ${String(c)===String(v)?'selected':''}>${esc(n)}</option>`;
+  $('#layer').innerHTML=`<div class="scrim" data-close></div><div class="modal" data-close><form class="modal-box" id="tf" role="dialog" aria-modal="true" aria-labelledby="tf-h" novalidate>
+    <div class="drawer-h"><h2 id="tf-h" style="margin:0">${ed?'Изменить заявку ЗЯ-'+t.id:'Новая заявка'}</h2><button type="button" class="x" data-close aria-label="Закрыть">×</button></div>
+    <div class="form">
+      <div class="field full"><label for="tf-title">Что случилось</label><input id="tf-title" value="${esc(t.title)}" placeholder="Например: не работает освещение в санузле" required><span class="err" id="tf-err" hidden>Опишите проблему одной фразой</span></div>
+      <div class="field full"><label for="tf-desc">Подробности</label><textarea id="tf-desc" placeholder="Где именно, с какого времени, что уже сделано">${esc(t.desc)}</textarea></div>
+      <div class="field"><label for="tf-cat">Система</label><select id="tf-cat">${CATS.map(c=>o(c,c,t.cat)).join('')}</select></div>
+      <div class="field"><label for="tf-prio">Приоритет</label><select id="tf-prio">${PRIO.map((p,i)=>o(i,p.n+' — SLA '+p.sla+' ч',t.prio)).join('')}</select></div>
+      <div class="field"><label for="tf-floor">Этаж</label><select id="tf-floor">${FLOORS.map(f=>o(f,flName(f),t.floor)).join('')}</select></div>
+      <div class="field"><label for="tf-room">Помещение</label><input id="tf-room" value="${esc(t.room)}" placeholder="Офис 504, санузел Ж"></div>
+      <div class="field"><label for="tf-asset">Оборудование</label><select id="tf-asset">${o('','Не указано',t.asset)}${db.assets.map(a=>o(a.id,a.id+' · '+a.name,t.asset)).join('')}</select></div>
+      <div class="field"><label for="tf-who">Исполнитель</label><select id="tf-who">${o('','Назначить позже',t.assignee)}${db.staff.map(s=>o(s.id,s.name,t.assignee)).join('')}</select></div>
+      <div class="field full"><label for="tf-author">Заявитель</label><input id="tf-author" value="${esc(t.author)}" placeholder="Арендатор, офис или служба"></div>
+    </div>
+    <div class="form-f"><button type="button" class="btn" data-close>Отмена</button><button class="btn primary">${ed?'Сохранить':'Создать заявку'}</button></div>
+  </form></div>`;
+  $('.modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLayer()});
+  $('#tf-asset').addEventListener('change',e=>{const a=assetBy(e.target.value);if(a){$('#tf-cat').value=a.cat;$('#tf-floor').value=a.floor;if(!$('#tf-room').value)$('#tf-room').value=a.loc}});
+  $('#tf').addEventListener('submit',e=>{
+    e.preventDefault();
+    const title=$('#tf-title').value.trim();
+    if(!title){$('#tf-err').hidden=false;$('#tf-title').focus();return}
+    const v={title,desc:$('#tf-desc').value.trim(),cat:$('#tf-cat').value,prio:+$('#tf-prio').value,floor:+$('#tf-floor').value,room:$('#tf-room').value.trim()||'—',asset:$('#tf-asset').value||null,assignee:$('#tf-who').value||null,author:$('#tf-author').value.trim()||'Диспетчер'};
+    if(ed){const old=t.assignee;Object.assign(t,v);t.history.push({t:NOW(),text:'Заявка изменена'});if(v.assignee&&v.assignee!==old&&t.status===0)t.status=1;commit();closeLayer();openTicket(t.id);toast('Изменения сохранены')}
+    else{const id=db.seq++;const n={id,...v,status:v.assignee?1:0,created:NOW(),doneAt:null,history:[{t:NOW(),text:'Заявка создана: '+v.author}]};if(v.assignee)n.history.push({t:NOW(),text:'Назначен: '+staffBy(v.assignee).name});db.tickets.push(n);commit();closeLayer();toast('Создана заявка ЗЯ-'+id)}
+  });
+  setTimeout(()=>$('#tf-title').focus(),0);
+}
+function staffForm(s){
+  const ed=!!s; s=s||{name:'',role:'',phone:'',email:'',shift:'',avail:0,note:''};
+  const busy=ed?db.tickets.filter(t=>t.assignee===s.id&&isOpen(t)).length:0;
+  const pl=ed?db.plans.filter(p=>p.who===s.id).length:0;
+  $('#layer').innerHTML=`<div class="scrim" data-close></div><div class="modal"><form class="modal-box" id="sf" role="dialog" aria-modal="true" aria-labelledby="sf-h" novalidate>
+    <div class="drawer-h"><h2 id="sf-h" style="margin:0">${ed?'Карточка сотрудника':'Новый сотрудник'}</h2><button type="button" class="x" data-close aria-label="Закрыть">×</button></div>
+    <div class="form">
+      <div class="field full"><label for="sf-name">ФИО</label><input id="sf-name" value="${esc(s.name)}" placeholder="Иванов Иван Иванович"><span class="err" id="sf-err" hidden>Укажите имя сотрудника</span></div>
+      <div class="field full"><label for="sf-role">Должность, допуски</label><input id="sf-role" value="${esc(s.role)}" placeholder="Электрик, IV группа допуска"></div>
+      <div class="field"><label for="sf-phone">Телефон</label><input id="sf-phone" type="tel" value="${esc(s.phone)}" placeholder="+7 900 000-00-00"></div>
+      <div class="field"><label for="sf-email">Почта</label><input id="sf-email" type="email" value="${esc(s.email||'')}" placeholder="name@company.ru"></div>
+      <div class="field"><label for="sf-shift">График работы</label><input id="sf-shift" value="${esc(s.shift)}" placeholder="Пн–Пт 9:00–18:00"></div>
+      <div class="field"><label for="sf-avail">Доступность</label><select id="sf-avail">${SSTATE.map((x,i)=>`<option value="${i}" ${(s.avail||0)===i?'selected':''}>${x.n}</option>`).join('')}</select></div>
+      <div class="field full"><label for="sf-note">Заметки</label><textarea id="sf-note" placeholder="Удостоверения, сроки аттестации, ключи от помещений">${esc(s.note||'')}</textarea></div>
+      ${ed?`<div class="field full"><button type="button" class="btn danger" id="sf-del" style="align-self:flex-start">Удалить сотрудника</button>
+        <div id="sf-confirm" hidden class="panel" style="padding:12px;display:flex;flex-direction:column;gap:8px"><span>Удалить ${esc(s.name)}? ${busy||pl?`С него будут сняты ${busy} откр. заявок и ${pl} работ ТО, их нужно будет переназначить.`:'Активных заявок и работ ТО у сотрудника нет.'}</span><div style="display:flex;gap:8px"><button type="button" class="btn danger sm" id="sf-delok">Удалить</button><button type="button" class="btn sm" id="sf-delno">Отмена</button></div></div></div>`:''}
+    </div>
+    <div class="form-f"><button type="button" class="btn" data-close>Отмена</button><button class="btn primary">${ed?'Сохранить':'Добавить'}</button></div></form></div>`;
+  $('.modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLayer()});
+  if(ed){
+    $('#sf-del').onclick=()=>{$('#sf-confirm').hidden=false};
+    $('#sf-delno').onclick=()=>{$('#sf-confirm').hidden=true};
+    $('#sf-delok').onclick=()=>{
+      db.tickets.forEach(t=>{if(t.assignee===s.id){t.assignee=null;if(isOpen(t)){t.history.push({t:NOW(),text:'Исполнитель снят: сотрудник удалён'});if(t.status===1)t.status=0}}});
+      db.plans.forEach(p=>{if(p.who===s.id)p.who=null});
+      db.staff=db.staff.filter(x=>x!==s);commit();closeLayer();toast('Сотрудник удалён');
+    };
+  }
+  $('#sf').addEventListener('submit',e=>{
+    e.preventDefault();
+    const name=$('#sf-name').value.trim();
+    if(!name){$('#sf-err').hidden=false;$('#sf-name').focus();return}
+    const v={name,role:$('#sf-role').value.trim(),phone:$('#sf-phone').value.trim(),email:$('#sf-email').value.trim(),shift:$('#sf-shift').value.trim(),avail:+$('#sf-avail').value,note:$('#sf-note').value.trim()};
+    if(ed)Object.assign(s,v);else db.staff.push({id:'s'+Date.now(),...v});
+    commit();closeLayer();toast(ed?'Карточка сохранена':'Сотрудник добавлен');
+  });
+  setTimeout(()=>$('#sf-name').focus(),0);
+}
+function planForm(){
+  $('#layer').innerHTML=`<div class="scrim" data-close></div><div class="modal"><form class="modal-box" id="pf" role="dialog" aria-modal="true" aria-labelledby="pf-h">
+    <div class="drawer-h"><h2 id="pf-h" style="margin:0">Новая регламентная работа</h2><button type="button" class="x" data-close aria-label="Закрыть">×</button></div>
+    <div class="form">
+      <div class="field full"><label for="pf-asset">Оборудование</label><select id="pf-asset">${db.assets.map(a=>`<option value="${a.id}">${a.id} · ${esc(a.name)}</option>`).join('')}</select></div>
+      <div class="field full"><label for="pf-task">Работа</label><input id="pf-task" placeholder="Например: проверка изоляции кабельных линий"><span class="err" id="pf-err" hidden>Укажите, что нужно сделать</span></div>
+      <div class="field"><label for="pf-per">Периодичность</label><select id="pf-per"><option value="7">Еженедельно</option><option value="30" selected>Ежемесячно</option><option value="90">Ежеквартально</option><option value="180">2 раза в год</option><option value="365">1 раз в год</option></select></div>
+      <div class="field"><label for="pf-who">Ответственный</label><select id="pf-who">${db.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-f"><button type="button" class="btn" data-close>Отмена</button><button class="btn primary">Добавить в график</button></div></form></div>`;
+  $('.modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLayer()});
+  $('#pf').addEventListener('submit',e=>{e.preventDefault();const task=$('#pf-task').value.trim();if(!task){$('#pf-err').hidden=false;return}
+    db.plans.push({id:'p'+Date.now(),asset:$('#pf-asset').value,task,period:+$('#pf-per').value,last:NOW(),who:$('#pf-who').value});commit();closeLayer();toast('Работа добавлена в график')});
+}
+
+/* ---------- общие обработчики ---------- */
+const main=$('#main');
+main.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act],[data-go],[data-open],[data-floor],[data-mode],[data-done],[data-assetq],[data-copy],[data-staffedit]');
+  if(!el)return;
+  if(el.dataset.act==='newstaff')return staffForm();
+  if(el.dataset.staffedit)return staffForm(staffBy(el.dataset.staffedit));
+  if(el.dataset.act==='new')return ticketForm(null,el.dataset.asset?(()=>{const a=assetBy(el.dataset.asset);return{asset:a.id,cat:a.cat,floor:a.floor,room:a.loc}})():null);
+  if(el.dataset.act==='newplan')return planForm();
+  if(el.dataset.go)return go(el.dataset.go,el.dataset.go==='tickets'?{st:el.dataset.st||'open',pr:el.dataset.pr||'',cat:'',fl:'',q:''}:null);
+  if(el.dataset.open)return openTicket(el.dataset.open);
+  if(el.dataset.floor)return go('tickets',{st:'open',fl:el.dataset.floor,pr:'',cat:'',q:''});
+  if(el.dataset.mode){ui.mode=el.dataset.mode;return render()}
+  if(el.dataset.assetq){const a=assetBy(el.dataset.assetq);return go('tickets',{st:'open',q:'',cat:a.cat,fl:String(a.floor),pr:''})}
+  if(el.dataset.done){const p=db.plans.find(x=>x.id===el.dataset.done);p.last=NOW();commit();toast('Отмечено. Следующее ТО: '+dDay(planNext(p)))}
+  if(el.dataset.copy){const v=el.dataset.copy;navigator.clipboard?.writeText(v).then(()=>toast('Номер скопирован'),()=>{const r=document.createRange();r.selectNodeContents(el);getSelection().removeAllRanges();getSelection().addRange(r)})}
+});
+main.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('tr[data-open]'))openTicket(e.target.dataset.open)});
+main.addEventListener('input',e=>{if(e.target.id==='f-q'){ui.q=e.target.value;const pos=e.target.selectionStart;render();const i=$('#f-q');i.focus();i.setSelectionRange(pos,pos)}});
+main.addEventListener('change',e=>{
+  const m={'f-st':'st','f-pr':'pr','f-cat':'cat','f-fl':'fl'}[e.target.id];
+  if(m){ui[m]=e.target.value;render()}
+  if(e.target.dataset.astate){assetBy(e.target.dataset.astate).state=+e.target.value;commit();toast('Состояние обновлено')}
+});
+$('#reset').addEventListener('click',()=>{db=seed();commit();toast('Восстановлены данные примера')});
+
+function commit(){save();render()}
+function render(){
+  renderNav();
+  main.innerHTML=({dash:vDash,tickets:vTickets,plan:vPlan,assets:vAssets,staff:vStaff}[ui.view]||vDash)();
+}
+render();
+setInterval(()=>{if(!document.activeElement||document.activeElement===document.body)render()},60e3);
+})();
+</script>
